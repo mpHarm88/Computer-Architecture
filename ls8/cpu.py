@@ -2,12 +2,18 @@
 
 import sys
 
+HLT = 0b00000001
+LDI = 0b10000010
+PRN = 0b01000111
+
 class CPU:
     """Main CPU class."""
 
     def __init__(self):
         """Construct a new CPU."""
-        pass
+        self.ram = [0]*256
+        self.reg = [0]*8
+        self.pc = 0
 
     def load(self):
         """Load a program into memory."""
@@ -29,7 +35,17 @@ class CPU:
         for instruction in program:
             self.ram[address] = instruction
             address += 1
+    
+    def ram_read(self, address):
+        # Return the value stored at the address
+        return self.ram[address]
 
+    def ram_write(self, address, value):
+        # Write the value to the inputted address
+        for x in range(len(self.ram)):
+            if self.ram[x] == address:
+                self.ram[x] = value
+                print(f"Value: {value}\nSaved at {address} in ram")
 
     def alu(self, op, reg_a, reg_b):
         """ALU operations."""
@@ -62,4 +78,43 @@ class CPU:
 
     def run(self):
         """Run the CPU."""
-        pass
+
+        # Instruction Register
+        inst_reg = list()
+
+        while self.ram[self.pc] != 0:
+
+            # If ram_read returns the LDI command then save the results to the appropriate register
+            if self.ram_read(self.pc) == LDI:
+                # register address location
+                opperand_a = int(f"{(self.ram[self.pc+1])}")
+
+                # value to be saved
+                opperand_b = int(f"{(self.ram[self.pc+2])}")
+
+                # Assign value to address in register
+                self.reg[opperand_a] = opperand_b
+
+                # store result in instruction register
+                inst_reg.append(opperand_b)
+
+                # Increment pc by 3
+                self.pc+=3
+            
+            # print the value
+            elif self.ram_read(self.pc) == PRN:
+                # Store idx location
+                reg_idx = int(f"{(self.ram[self.pc+1])}")
+
+                #print the value
+                print(self.reg[reg_idx])
+
+                # append the result to instruction register
+                inst_reg.append(self.reg[reg_idx])
+
+                # Increment pc by 2
+                self.pc+=2
+
+            # Exit the program if HLT byte code appears
+            elif self.ram_read(self.pc) == HLT:
+                break
