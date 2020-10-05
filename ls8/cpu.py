@@ -5,6 +5,7 @@ import sys
 HLT = 0b00000001
 LDI = 0b10000010
 PRN = 0b01000111
+MUL = 0b10100010
 
 class CPU:
     """Main CPU class."""
@@ -12,30 +13,34 @@ class CPU:
     def __init__(self):
         """Construct a new CPU."""
         self.ram = [0]*256
-        self.reg = [0]*8
+        self.reg = [0]*12
         self.pc = 0
 
     def load(self):
-        """Load a program into memory."""
 
+        # Address location in RAM
         address = 0
 
-        # For now, we've just hardcoded a program:
+        # If length of args is less than 2 then return print statement
+        if len(sys.argv) < 2:
+            print(f"Please enter an additional argument\nCurrent Args: {sys.argv[0]}")
+        
+        # Open file and filter out lack and commented lines
+        else:
+            with open(sys.argv[1], "r") as f:
+                for x in f:
+                    # Skip the line if it starts with "#" or length of stripped line == 0
+                    if x[0] == "#" or len(x.rstrip()) == 0:
+                        continue
 
-        program = [
-            # From print8.ls8
-            0b10000010, # LDI R0,8
-            0b00000000,
-            0b00001000,
-            0b01000111, # PRN R0
-            0b00000000,
-            0b00000001, # HLT
-        ]
+                    # Add line to RAM at current address
+                    else:
+                        val = bin(int(x.split()[0], 2))
+                        # Save to ram and increment address
+                        self.ram[address] = val
+                        address+=1
+            f.close()
 
-        for instruction in program:
-            self.ram[address] = instruction
-            address += 1
-    
     def ram_read(self, address):
         # Return the value stored at the address
         return self.ram[address]
@@ -52,7 +57,9 @@ class CPU:
 
         if op == "ADD":
             self.reg[reg_a] += self.reg[reg_b]
-        #elif op == "SUB": etc
+
+        elif op == "MUL": 
+            self.reg[reg_a] *= self.reg[reg_b]
         else:
             raise Exception("Unsupported ALU operation")
 
@@ -85,12 +92,13 @@ class CPU:
         while self.ram[self.pc] != 0:
 
             # If ram_read returns the LDI command then save the results to the appropriate register
-            if self.ram_read(self.pc) == LDI:
+            if int(self.ram_read(self.pc), 2) == LDI:
+
                 # register address location
-                opperand_a = int(f"{(self.ram[self.pc+1])}")
+                opperand_a = int(self.ram[self.pc+1], 2)
 
                 # value to be saved
-                opperand_b = int(f"{(self.ram[self.pc+2])}")
+                opperand_b = int(self.ram[self.pc+2], 2)
 
                 # Assign value to address in register
                 self.reg[opperand_a] = opperand_b
@@ -102,9 +110,9 @@ class CPU:
                 self.pc+=3
             
             # print the value
-            elif self.ram_read(self.pc) == PRN:
+            elif int(self.ram_read(self.pc),2) == PRN:
                 # Store idx location
-                reg_idx = int(f"{(self.ram[self.pc+1])}")
+                reg_idx = int(self.ram[self.pc+1], 2)
 
                 #print the value
                 print(self.reg[reg_idx])
@@ -114,7 +122,20 @@ class CPU:
 
                 # Increment pc by 2
                 self.pc+=2
+            
+            # Multiply 
+            elif int(self.ram_read(self.pc), 2) == MUL:
+
+                # Find index location of numbers to be multiplied
+                reg1 = int(self.ram[self.pc+1],2)
+                reg2 = int(self.ram[self.pc+2],2)
+
+                # Passinto alu for processing
+                self.alu("MUL", reg1, reg2)
+
+                # Increment pc by 3
+                self.pc+=3
 
             # Exit the program if HLT byte code appears
-            elif self.ram_read(self.pc) == HLT:
+            elif int(self.ram_read(self.pc),2) == HLT:
                 break
