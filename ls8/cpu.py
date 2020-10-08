@@ -6,6 +6,8 @@ HLT = 0b00000001
 LDI = 0b10000010
 PRN = 0b01000111
 MUL = 0b10100010
+PUSH = 0b01000101
+POP = 0b01000110
 
 class CPU:
     """Main CPU class."""
@@ -13,8 +15,11 @@ class CPU:
     def __init__(self):
         """Construct a new CPU."""
         self.ram = [0]*256
-        self.reg = [0]*12
+        self.reg = [0]*8
         self.pc = 0
+
+        # Initialize stack pointer
+        self.reg[7] = 0xF4
 
     def load(self):
 
@@ -135,6 +140,41 @@ class CPU:
 
                 # Increment pc by 3
                 self.pc+=3
+            
+            elif int(self.ram_read(self.pc), 2) == PUSH:
+                
+                # decrement the stakc pointer
+                self.reg[7] -= 1
+
+                # find index and save vale into the register
+                reg_idx = int(self.ram[self.pc +1],2)
+                value = self.reg[reg_idx]
+
+                # Copy value to the correct address
+                SP = self.reg[7]
+                self.ram[SP] = value
+
+                self.pc+=2
+
+            elif int(self.ram_read(self.pc), 2) == POP:
+
+                # stack ponter location
+                SP = self.reg[7]
+
+                # find value of SP in ram
+                value = self.ram[SP]
+
+                # find the index value where the vale should be saved
+                reg_idx = int(self.ram[self.pc+1], 2)
+
+                # Save value to the register
+                self.reg[reg_idx] = value
+
+                # Increment the stack index
+                self.reg[7] +=1
+
+                # Increment pc
+                self.pc+=2
 
             # Exit the program if HLT byte code appears
             elif int(self.ram_read(self.pc),2) == HLT:
